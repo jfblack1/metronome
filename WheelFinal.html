@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script type="text/javascript">
+
+	//Global variables
+	var moveListener="";
+	var count=120;
+	var previousCount=120;
+	var eId="";
+	var metroInterval="";
+	var pace=120;
+	var state=1;
+	var started=-1;
+	var scrollState=0;
+	var signOnColor="#EEEEEE";
+	var signOffColor="#BEBEBE";
+	var originalTheta=0;
+	var previousTheta=0;
+	var originalQuadrant=1;
+	var timesAround=0;
+	var quadrant=0;
+	var quadrantDifference=0;
+	var diff=0;
+		
+
+	function initialize () {
+		var target="#innerCircle";
+		var innerElem=document.querySelector (target);
+		target="#outerCircle";
+		var outerElem=document.querySelector (target);
+		outerElem.addEventListener ("mousedown", function () {
+			clickableArea ();	
+		});
+	};
+
+	function clickableArea () {
+		eId=event;
+		scrollState=0;
+		//alert (eId);
+		var target="#innerCircle";
+		var innerElem=document.querySelector (target);
+		target="#outerCircle";
+		var outerElem=document.querySelector (target);
+		//alert (event.offsetTop + ", " + event.offsetLeft);
+		var buttonSpaceLeft=0;//event.offsetLeft;
+		var buttonSpaceTop=0;//event.offsetTop;
+		if (buttonSpaceLeft < 0 || buttonSpaceTop < 0) {
+			return;
+		}
+		//alert (buttonSpaceLeft + " " + buttonSpaceTop);
+		
+		var innerRadius=110;
+		var outerRadius=150;
+		var outerDiameter=300;
+		var actualRadius=0;
+		var x=(event.clientX - buttonSpaceLeft) - outerRadius;
+		var y=outerRadius - (event.clientY - buttonSpaceTop);
+		var n=((outerRadius ** 2) - (y ** 2)) ** (1 / 2);
+		//n=n ** (1 / 2);
+		
+		var outerClickBoundaryMinX=0 - n;
+		var outerClickBoundaryMaxX=n;
+		n=((outerRadius ** 2) - (x ** 2)) ** (1 / 2);
+		//n=n ** (1 / 2);
+		var outerClickBoundaryMaxY=n;
+		var outerClickBoundaryMinY=0 - n;
+		
+		if (innerElem == null || outerElem == null) {
+			return;
+		}
+		actualRadius=((x ** 2) + (y ** 2)) ** (1 / 2);
+		if (x == 0) {
+			if (y >0) {
+				originalTheta=90;
+			}else if (y<0) {
+				originalTheta=270;
+			}else {
+				originalTheta=0;
+			}
+		}else {
+			originalTheta=magnitude (y) / magnitude (x);
+			originalTheta=Math.atan (originalTheta) * (360 / (2 * Math.PI));
+			originalTheta=Math.floor (originalTheta);
+		}
+		if (x < 0 && y > 0) {
+			originalTheta=180-originalTheta;
+		}
+		if (x < 0 && y < 0) {
+			originalTheta+=180;
+		}
+		if (x > 0 && y < 0) {
+			originalTheta=360 - originalTheta;
+		}
+		if (x > 0 && y == 0) {
+			originalTheta=0;
+		}
+		if (x < 0 && y == 0) {
+			originalTheta=180;
+		}		
+
+//alert (actualRadius + " " + innerRadius + x + " " + y + " " + outerClickBoundaryMinX + " " + outerClickBoundaryMaxX + " " + outerClickBoundaryMinY + " " + outerClickBoundaryMaxY); 
+		if (x >= outerClickBoundaryMinX && x <= outerClickBoundaryMaxX && y >= outerClickBoundaryMinY && y <= outerClickBoundaryMaxY) {
+			if (actualRadius <= innerRadius) {
+				//alert ("set");
+				toggle ();
+				
+			}else {
+				scrollState=1;
+				outerElem.style.backgroundColor="#D5D5D5";
+				setBPM (count);
+				//alert ("scroll");
+				outerElem.addEventListener ("mousemove", getCount);
+			}
+		}
+	};
+
+	function magnitude (value) {
+		var result=value;
+		if (value < 0) {
+			result= value * -1;
+		}
+		return result;
+	};
+
+	function radiansToDegrees (value) {
+		var result=value * (360 / (2 * Math.PI));
+		return result;
+	};
+
+	function getCount () {
+		eId=event;
+		var outerRadius=150;
+		//moveListener=window.setInterval (function () {
+		//alert (event.offsetLeft + "," + event.offsetTop + " " + event.clientX + "," + event.clientY + " " + x + "," + y);
+		//alert (eId.clientX + eId.clientY + " " + count);
+		var x=eId.clientX - outerRadius;
+		var y=outerRadius - eId.clientY;
+		var theta=0;
+		quadrant=1;
+		if (x == 0) {
+			if (y >=0) {
+				theta=90;
+				quadrant=2;
+			}else {
+				theta=270;
+				quadrant=4;
+			}
+		}else {
+			theta=magnitude (y) / magnitude (x);
+			theta=Math.atan (theta) * (360 / (2 * Math.PI));
+			theta=Math.floor (theta);
+		}
+		if (x < 0 && y > 0) {
+			theta=180-theta;
+		}
+		if (x < 0 && y < 0) {
+			theta=(theta) + 180;
+		}
+		if (x > 0 && y < 0) {
+			theta=360 - theta;
+		}
+		if (x >= 0 && y == 0) {
+			theta=0;
+		}
+		if (x < 0 && y == 0) {
+			theta=180;
+		}		
+		diff=previousTheta - theta;
+		if (diff > 1) {
+			diff=-1;
+		}
+		if (diff < -1) {
+			diff=1;
+		}
+		previousTheta=theta;		
+
+		//alert (previousTheta + " " + theta + " " + originalTheta + " ");
+		if (diff != 0) {
+			count+=diff; //clockwise is increasing
+			if (count < 0) {
+				count=0;
+			}
+			setBPM (count);
+		}
+		//}, 100);
+	};
+
+	function setBPM (value) {
+		var target="#innerCircle";
+		var elem=document.querySelector (target);
+		var bpmDisplay=document.createElement ("div");
+		var bpmDisplay1=document.createElement ("div");
+		var bpmDisplay2=document.createElement ("div");
+		var bpmDisplay3=document.createElement ("div");
+		bpmDisplay1.setAttribute ("style", "height:30px;margin-top:61px;margin-bottom:2px;display:block;color:#FAFAFA;");
+		bpmDisplay2.setAttribute ("style", "height:30px;margin:2px;display:block;color:#222222;");
+		bpmDisplay3.setAttribute ("style", "height:30px;margin:2px;display:block;color:#FAFAFA;");
+		bpmDisplay.setAttribute ("style", "border-radius:50%;width:100%;height:100%;font-style:bold;font-size:30px;color:#FFFFFF;");//background-color:rgba(95,95,95,0.6);");
+		var textNode1=document.createTextNode (value-1);
+		var textNode2=document.createTextNode (value);
+		var textNode3=document.createTextNode (value+1);
+		bpmDisplay1.appendChild (textNode1);
+		bpmDisplay2.appendChild (textNode2);
+		bpmDisplay3.appendChild (textNode3);
+		//alert (elem.childNodes.length);
+		//if (elem.childNodes.length > 3) {
+			for (i=0; i<elem.childNodes.length; i+=1) {
+				elem.childNodes[i].remove();
+			}
+			//elem.removeAll();
+		//}
+		if (elem.childNodes.length == 1) {
+			elem.childNodes[0].remove();
+		}
+		//alert (elem.childNodes.length);
+		bpmDisplay.appendChild (bpmDisplay1);
+		bpmDisplay.appendChild (bpmDisplay2);
+		bpmDisplay.appendChild (bpmDisplay3);
+		//alert (elem.childNodes.length);
+		elem.style.backgroundColor="#DEDEDE";
+
+		elem.appendChild (bpmDisplay);
+		
+
+
+		pace=value;
+	};
+
+	function set () {
+		oldCount=count;
+		var target="#outerCircle";
+		var elem=document.querySelector (target);
+		elem.removeEventListener ("mousemove", getCount);
+		//window.clearInterval (moveListener);
+		//alert ("mouseup event:" + scrollState);
+		if (scrollState == 1) {
+			var target="#outerCircle";
+			var outerElem=document.querySelector (target);
+			outerElem.style.backgroundColor="#E5E5E5";
+			target="#innerCircle";
+			elem=document.querySelector (target);
+			//alert (elem.childNodes.length);
+			//if (elem.childNodes.length > 3) {
+				for (i=0; i<=elem.childNodes.length; i+=1) {
+					elem.childNodes[i].remove();
+				}
+				//elem.removeAll();
+			//}
+			scrollState=0;
+			//alert (elem.childNodes.length);
+
+			var display=document.createElement ("div");
+			display.setAttribute ("style", "width:100%;height:100%;vertical-align:middle;text-align:center;padding-top:84px");
+			var signDisplay=document.createElement ("div");
+			signDisplay.setAttribute ("style", "display:block;");
+			var sign1=document.createElement ("div");
+			sign1.setAttribute ("style", "display:inline-block;margin-top:12px;margin-bottom:2px;margin-right:24px;padding:0px;width:24px;height:24px;border:4px;border-radius:50%;border-color:#DEDEDE;background-color:#EEEEEE;");
+			var sign2=document.createElement ("div");
+			sign2.setAttribute ("style", "display:inline-block;margin-top:12px;margin-bottom:2px;margin-left:24px;padding:0px;width:24px;height:24px;border:4px;border-radius:50%;border-color:#DEDEDE;background-color:#bebebe;");
+			display.setAttribute ("id", "display");
+			signDisplay.setAttribute ("id", "signDisplay");
+			sign1.setAttribute ("id", "sign1");
+			sign2.setAttribute ("id", "sign2");
+			signDisplay.appendChild (sign1);
+			signDisplay.appendChild (sign2);
+			display.appendChild (signDisplay);
+			elem.style.backgroundColor="#FFFFFF";
+			elem.appendChild (display);
+		}
+		
+	};
+
+	function toggle () {
+		//target="#innerCircle";
+		//elem=document.querySelector (target);
+		if (started == 1) {
+			hold ();
+			//elem.style.backgroundColor="#FFFFFF";
+		} else {
+			flashSign ();
+			//elem.style.backgroundColor="#FFFFFF";
+		}
+		started=started * -1;
+	};
+
+	function getIntervalTime (bpm) {
+		if (bpm < 0) {
+			return;
+		}
+		var result=0;
+		var timesPerSec=Math.floor (bpm / 60);
+		result=1000 / timesPerSec;
+		return result;
+	};
+
+	function showSign (signId) {
+		var target="#sign" + signId;
+		var elem=document.querySelector (target);
+		elem.style.backgroundColor=signOnColor;
+	};
+
+	function hideSign (signId) {
+		var target="#sign" + signId;
+		var elem=document.querySelector (target);
+		elem.style.backgroundColor=signOffColor;
+	};
+
+	function flashSign () {
+		var timeInterval=getIntervalTime (pace);
+		//alert (timeInterval);
+		metroInterval=window.setInterval (function () {
+			if (state == 1) {
+				showSign(1);
+				hideSign(2);
+			}else {
+				showSign(2);
+				hideSign(1);
+			}
+			state=state * (0-1);
+		}, timeInterval);
+	};
+
+	function hold () {
+		window.clearInterval (metroInterval);
+	};
+
+	function increasePace () {
+		//if (pace <= 6000000) {
+		pace+=1;
+		//}
+		showPace ();
+	};
+
+	function decreasePace () {
+		if (pace > 0) {
+			pace-=1;
+		}
+		showPace ();
+	};
+
+	function showPace () {
+		var target="#metroDisplay";
+		var elem=document.querySelector (target);
+		elem.innerHTML=pace;
+	};
+	
+</script>
+</head>
+<body>
+<div onmousedown="clickableArea()" onmouseexit="set()" onmouseup="set()" id="outerCircle" style="display:inline-block;width:300px;height:300px;border-radius:50%;border:1px;margin:0px;padding:0px;background-color:#E5E5E5;">
+	<div id="display" style=""></div>
+	<div id="innerCircle" style="z-index:1;display:inline-block;width:220px;height:220px;border-radius:50%;border:1px;vertical-align:middle;text-align:center;background-color:#FFFFFF;margin:40px;padding:0px;">
+		<div id="display" style="width:100%;height:100%;vertical-align:middle;text-align:center;padding-top:84px">
+			<div id="signDisplay" style="display:block;">
+				<div id="sign1" style="display:inline-block;margin-top:12px;margin-bottom:2px;margin-right:24px;padding:0px;width:24px;height:24px;border:4px;border-radius:50%;border-color:#DEDEDE;background-color:#EEEEEE;"></div>
+				<div id="sign2" style="display:inline-block;margin-top:12px;margin-bottom:2px;margin-left:24px;padding:0px;width:24px;height:24px;border:4px;border-radius:50%;border-color:#DEDEDE;background-color:#bebebe;"></div>
+			</div>
+		</div>
+	</div>
+</div>
+</body>
+</html>
